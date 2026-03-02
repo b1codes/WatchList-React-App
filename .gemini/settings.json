@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "BeforeAgent": [
+      {
+        "name": "backend-status",
+        "type": "command",
+        "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/backend-status.sh",
+        "timeout": 2000
+      }
+    ],
+    "BeforeTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "name": "secret-guard",
+            "type": "command",
+            "command": "$GEMINI_PROJECT_DIR/.gemini/hooks/secret-guard.sh",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}
