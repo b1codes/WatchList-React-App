@@ -85,7 +85,7 @@ export default function TabTwoScreen() {
   const suggestedTags = ['Oppenheimer', 'Animated', 'Marvel', 'Drama', 'Comedy', 'Thriller'];
 
   const handlePressItem = (item: TmdbSearchResult) => {
-    router.push(`/movie/${item.id}`);
+    router.push(`/movie/${item.id}?type=${item.media_type || 'movie'}`);
   };
 
   const backgroundColor = useThemeColor({}, 'background');

@@ -55,15 +55,15 @@ namespace WatchListApi.Controllers
         }
 
         [HttpGet("details/{id:int}")]
-        public async Task<IActionResult> GetDetails(int id)
+        public async Task<IActionResult> GetDetails(int id, [FromQuery] string type = "movie")
         {
             if (id <= 0)
             {
                 return BadRequest(ApiResponse<string>.Fail("Id must be greater than zero."));
             }
 
-            var details = await _tmdbService.GetMovieDetailsAsync(id);
-            var providers = await _tmdbService.GetWatchProvidersAsync(id);
+            var details = await _tmdbService.GetMovieDetailsAsync(id, type);
+            var providers = await _tmdbService.GetWatchProvidersAsync(id, type);
             var response = new MovieDetailsResponse
             {
                 Details = details,
@@ -74,26 +74,26 @@ namespace WatchListApi.Controllers
         }
 
         [HttpGet("similar/{id:int}")]
-        public async Task<IActionResult> GetSimilar(int id, [FromQuery] int page = 1)
+        public async Task<IActionResult> GetSimilar(int id, [FromQuery] int page = 1, [FromQuery] string type = "movie")
         {
             if (id <= 0)
             {
                 return BadRequest(ApiResponse<string>.Fail("Id must be greater than zero."));
             }
 
-            var results = await _tmdbService.GetSimilarMoviesAsync(id, page);
+            var results = await _tmdbService.GetSimilarMoviesAsync(id, page, type);
             return Ok(ApiResponse<TmdbPagedResponse<TmdbSearchResult>?>.Ok(results));
         }
 
         [HttpGet("recommendations/{id:int}")]
-        public async Task<IActionResult> GetRecommendations(int id, [FromQuery] int page = 1)
+        public async Task<IActionResult> GetRecommendations(int id, [FromQuery] int page = 1, [FromQuery] string type = "movie")
         {
             if (id <= 0)
             {
                 return BadRequest(ApiResponse<string>.Fail("Id must be greater than zero."));
             }
 
-            var results = await _tmdbService.GetRecommendedMoviesAsync(id, page);
+            var results = await _tmdbService.GetRecommendedMoviesAsync(id, page, type);
             return Ok(ApiResponse<TmdbPagedResponse<TmdbSearchResult>?>.Ok(results));
         }
     }

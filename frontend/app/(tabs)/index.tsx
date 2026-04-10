@@ -46,7 +46,7 @@ export default function HomeScreen() {
   );
 
   const handlePressMovie = (item: TmdbSearchResult) => {
-    router.push(`/movie/${item.id}`);
+    router.push(`/movie/${item.id}?type=${item.media_type || 'movie'}`);
   };
 
   const renderRow = (title: string, items?: TmdbSearchResult[]) => (

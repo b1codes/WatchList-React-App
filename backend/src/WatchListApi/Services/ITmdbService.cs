@@ -9,10 +9,10 @@ namespace WatchListApi.Services
         Task<TmdbPagedResponse<TmdbSearchResult>?> SearchMultiAsync(string query, int page = 1);
         Task<TmdbPagedResponse<TmdbSearchResult>?> GetTrendingAsync();
         Task<TmdbPagedResponse<TmdbSearchResult>?> DiscoverAsync(int page = 1);
-        Task<TmdbMovieDetails?> GetMovieDetailsAsync(int id);
-        Task<TmdbWatchProvidersResponse?> GetWatchProvidersAsync(int id);
-        Task<TmdbPagedResponse<TmdbSearchResult>?> GetSimilarMoviesAsync(int id, int page = 1);
-        Task<TmdbPagedResponse<TmdbSearchResult>?> GetRecommendedMoviesAsync(int id, int page = 1);
+        Task<TmdbMovieDetails?> GetMovieDetailsAsync(int id, string type = "movie");
+        Task<TmdbWatchProvidersResponse?> GetWatchProvidersAsync(int id, string type = "movie");
+        Task<TmdbPagedResponse<TmdbSearchResult>?> GetSimilarMoviesAsync(int id, int page = 1, string type = "movie");
+        Task<TmdbPagedResponse<TmdbSearchResult>?> GetRecommendedMoviesAsync(int id, int page = 1, string type = "movie");
         Task<T> GetCachedAsync<T>(string key, Func<Task<T>> fetchFunction);
     }
 }

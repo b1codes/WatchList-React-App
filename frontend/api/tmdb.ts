@@ -19,11 +19,11 @@ export const getTrendingMovies = () =>
 export const discoverMovies = (page = 1) =>
   requestApi<TmdbPagedResponse<TmdbSearchResult> | null>(`/api/movies/discover?page=${page}`);
 
-export const getMovieDetails = (id: number) =>
-  requestApi<MovieDetailsResponse | null>(`/api/movies/details/${id}`);
+export const getMovieDetails = (id: number, type: string = 'movie') =>
+  requestApi<MovieDetailsResponse | null>(`/api/movies/details/${id}?type=${type}`);
 
-export const getSimilarMovies = (id: number, page = 1) =>
-  requestApi<TmdbPagedResponse<TmdbSearchResult> | null>(`/api/movies/similar/${id}?page=${page}`);
+export const getSimilarMovies = (id: number, page = 1, type: string = 'movie') =>
+  requestApi<TmdbPagedResponse<TmdbSearchResult> | null>(`/api/movies/similar/${id}?page=${page}&type=${type}`);
 
-export const getRecommendedMovies = (id: number, page = 1) =>
-  requestApi<TmdbPagedResponse<TmdbSearchResult> | null>(`/api/movies/recommendations/${id}?page=${page}`);
+export const getRecommendedMovies = (id: number, page = 1, type: string = 'movie') =>
+  requestApi<TmdbPagedResponse<TmdbSearchResult> | null>(`/api/movies/recommendations/${id}?page=${page}&type=${type}`);

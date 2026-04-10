@@ -53,31 +53,31 @@ namespace WatchListApi.Services
                 () => GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url));
         }
 
-        public Task<TmdbMovieDetails?> GetMovieDetailsAsync(int id)
+        public Task<TmdbMovieDetails?> GetMovieDetailsAsync(int id, string type = "movie")
         {
-            var url = $"{_tmdbSettings.BaseUrl}/movie/{id}?api_key={_tmdbSettings.ApiKey}&append_to_response=credits,videos";
+            var url = $"{_tmdbSettings.BaseUrl}/{type}/{id}?api_key={_tmdbSettings.ApiKey}&append_to_response=credits,videos";
             return GetAsync<TmdbMovieDetails>(url);
         }
 
-        public Task<TmdbWatchProvidersResponse?> GetWatchProvidersAsync(int id)
+        public Task<TmdbWatchProvidersResponse?> GetWatchProvidersAsync(int id, string type = "movie")
         {
-            var url = $"{_tmdbSettings.BaseUrl}/movie/{id}/watch/providers?api_key={_tmdbSettings.ApiKey}";
+            var url = $"{_tmdbSettings.BaseUrl}/{type}/{id}/watch/providers?api_key={_tmdbSettings.ApiKey}";
             return GetAsync<TmdbWatchProvidersResponse>(url);
         }
 
-        public Task<TmdbPagedResponse<TmdbSearchResult>?> GetSimilarMoviesAsync(int id, int page = 1)
+        public Task<TmdbPagedResponse<TmdbSearchResult>?> GetSimilarMoviesAsync(int id, int page = 1, string type = "movie")
         {
-            var url = $"{_tmdbSettings.BaseUrl}/movie/{id}/similar?api_key={_tmdbSettings.ApiKey}&page={page}";
+            var url = $"{_tmdbSettings.BaseUrl}/{type}/{id}/similar?api_key={_tmdbSettings.ApiKey}&page={page}";
             return GetCachedAsync(
-                $"tmdb:similar:{id}:{page}",
+                $"tmdb:similar:{type}:{id}:{page}",
                 () => GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url));
         }
 
-        public Task<TmdbPagedResponse<TmdbSearchResult>?> GetRecommendedMoviesAsync(int id, int page = 1)
+        public Task<TmdbPagedResponse<TmdbSearchResult>?> GetRecommendedMoviesAsync(int id, int page = 1, string type = "movie")
         {
-            var url = $"{_tmdbSettings.BaseUrl}/movie/{id}/recommendations?api_key={_tmdbSettings.ApiKey}&page={page}";
+            var url = $"{_tmdbSettings.BaseUrl}/{type}/{id}/recommendations?api_key={_tmdbSettings.ApiKey}&page={page}";
             return GetCachedAsync(
-                $"tmdb:recommendations:{id}:{page}",
+                $"tmdb:recommendations:{type}:{id}:{page}",
                 () => GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url));
         }
 

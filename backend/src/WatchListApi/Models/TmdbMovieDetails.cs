@@ -25,6 +25,21 @@ public class TmdbMovieDetails
     [JsonPropertyName("runtime")]
     public int? Runtime { get; init; }
 
+    [JsonPropertyName("name")]
+    public string? Name { get; init; }
+
+    [JsonPropertyName("first_air_date")]
+    public string? FirstAirDate { get; init; }
+
+    [JsonPropertyName("number_of_seasons")]
+    public int? NumberOfSeasons { get; init; }
+
+    [JsonPropertyName("number_of_episodes")]
+    public int? NumberOfEpisodes { get; init; }
+
+    [JsonPropertyName("episode_run_time")]
+    public List<int>? EpisodeRunTime { get; init; }
+
     [JsonPropertyName("genres")]
     public List<TmdbGenre> Genres { get; init; } = new();
 

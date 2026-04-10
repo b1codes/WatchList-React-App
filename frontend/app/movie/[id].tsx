@@ -22,8 +22,9 @@ const buildImageUrl = (baseUrl: string | null, size: string, path?: string | nul
 
 export default function MovieDetailsScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
+  const { id, type: typeParam } = useLocalSearchParams();
   const movieId = Number(Array.isArray(id) ? id[0] : id);
+  const mediaType = (Array.isArray(typeParam) ? typeParam[0] : typeParam) || 'movie';
   const queryClient = useQueryClient();
 
   const configQuery = useQuery({
@@ -32,8 +33,8 @@ export default function MovieDetailsScreen() {
   });
 
   const detailsQuery = useQuery({
-    queryKey: ['movie-details', movieId],
-    queryFn: () => getMovieDetails(movieId),
+    queryKey: ['movie-details', movieId, mediaType],
+    queryFn: () => getMovieDetails(movieId, mediaType),
     enabled: Number.isFinite(movieId) && movieId > 0,
   });
 
@@ -43,14 +44,14 @@ export default function MovieDetailsScreen() {
   });
 
   const similarQuery = useQuery({
-    queryKey: ['similar-movies', movieId],
-    queryFn: () => getSimilarMovies(movieId),
+    queryKey: ['similar-movies', movieId, mediaType],
+    queryFn: () => getSimilarMovies(movieId, 1, mediaType),
     enabled: Number.isFinite(movieId) && movieId > 0,
   });
 
   const recommendedQuery = useQuery({
-    queryKey: ['recommended-movies', movieId],
-    queryFn: () => getRecommendedMovies(movieId),
+    queryKey: ['recommended-movies', movieId, mediaType],
+    queryFn: () => getRecommendedMovies(movieId, 1, mediaType),
     enabled: Number.isFinite(movieId) && movieId > 0,
   });
 
@@ -74,7 +75,10 @@ export default function MovieDetailsScreen() {
   const details = detailsQuery.data?.details ?? null;
   const posterUrl = buildImageUrl(baseUrl, 'w780', details?.poster_path);
 
-  const releaseYear = details?.release_date ? details.release_date.slice(0, 4) : null;
+  const title = details?.title ?? details?.name ?? 'Loading...';
+  const rawDate = details?.release_date || details?.first_air_date;
+  const releaseYear = rawDate ? rawDate.slice(0, 4) : null;
+  const runtime = details?.runtime ?? details?.episode_run_time?.[0];
 
   const isInWatchlist = Boolean(
     watchlistQuery.data?.some((item) => item.tmdbId === movieId),
@@ -89,8 +93,8 @@ export default function MovieDetailsScreen() {
 
     const payload: CreateWatchListItemRequest = {
       tmdbId: movieId,
-      title: details.title ?? 'Untitled',
-      type: 'movie',
+      title: title,
+      type: mediaType,
       posterPath: details.poster_path ?? null,
       releaseYear: releaseYear ? Number(releaseYear) : null,
     };
@@ -110,7 +114,7 @@ export default function MovieDetailsScreen() {
 
   const handlePressMovie = (item: TmdbSearchResult) => {
     // using router.push adds it to the navigation stack
-    router.push(`/movie/${item.id}`);
+    router.push(`/movie/${item.id}?type=${item.media_type || mediaType}`);
   };
 
   const renderRow = (title: string, items?: TmdbSearchResult[]) => {
@@ -165,12 +169,12 @@ export default function MovieDetailsScreen() {
           />
           <View style={styles.heroInfo}>
             <ThemedText type="title" style={styles.titleText}>
-              {details?.title ?? 'Loading...'}
+              {title}
             </ThemedText>
 
             <ThemedText style={styles.subtitleText}>
               {releaseYear
-                ? `${releaseYear} · ${details?.runtime ? `${details.runtime} min` : 'Runtime n/a'}`
+                ? `${releaseYear} · ${runtime ? `${runtime} min` : 'Runtime n/a'}`
                 : 'Runtime unavailable'}
             </ThemedText>
 
@@ -210,6 +214,13 @@ export default function MovieDetailsScreen() {
             <ThemedText style={styles.metaValue}>{writers.slice(0, 3).map(d => d.name).join(', ')}</ThemedText>
           </View>
         )}
+
+        {mediaType === 'tv' && details?.number_of_seasons && details?.number_of_episodes ? (
+          <View style={styles.metaRow}>
+            <ThemedText style={styles.metaLabel}>TV Stats:</ThemedText>
+            <ThemedText style={styles.metaValue}>{details.number_of_seasons} Seasons, {details.number_of_episodes} Episodes</ThemedText>
+          </View>
+        ) : null}
 
         {/* Cast Section */}
         {cast.length > 0 && (
