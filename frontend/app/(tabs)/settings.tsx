@@ -2,20 +2,26 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-
-const USER_ID = process.env.EXPO_PUBLIC_USER_ID ?? 'test-user-1';
+import { useAuth } from '@/context/AuthContext';
+import { auth } from '@/config/firebase';
 
 export default function SettingsScreen() {
+  const { user } = useAuth();
+
+  const handleSignOut = async () => {
+    await auth.signOut();
+  };
+
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title">Profile</ThemedText>
-      <ThemedText style={styles.subtitle}>Authentication is coming soon.</ThemedText>
+      <ThemedText style={styles.subtitle}>Manage your account settings.</ThemedText>
 
       <View style={styles.card}>
         <ThemedText type="defaultSemiBold">Current User</ThemedText>
-        <ThemedText style={styles.userId}>{USER_ID}</ThemedText>
-        <Pressable style={styles.button}>
-          <ThemedText style={styles.buttonText}>Connect Firebase</ThemedText>
+        <ThemedText style={styles.userId}>{user?.email ?? 'Unknown'}</ThemedText>
+        <Pressable style={styles.button} onPress={handleSignOut}>
+          <ThemedText style={styles.buttonText}>Sign Out</ThemedText>
         </Pressable>
       </View>
     </ThemedView>

@@ -71,11 +71,6 @@ public class WatchListController : ControllerBase
                    ?? User.FindFirstValue("sub");
         }
 
-        if (Request.Headers.TryGetValue("X-User-Id", out var headerValue))
-        {
-            return headerValue.ToString();
-        }
-
         return null;
     }
 }

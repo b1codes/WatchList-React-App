@@ -1,20 +1,22 @@
 import { requestApi } from '@/api/client';
 import { CreateWatchListItemRequest, WatchListItem } from '@/constants/types';
+import { auth } from '@/config/firebase';
 
-const DEFAULT_USER_ID = 'test-user-1';
-
-const getUserIdHeader = async () => {
-  const userId = process.env.EXPO_PUBLIC_USER_ID ?? DEFAULT_USER_ID;
-  return { 'X-User-Id': userId };
+const getAuthHeaders = async (): Promise<Record<string, string>> => {
+  const token = await auth.currentUser?.getIdToken();
+  if (token) {
+    return { 'Authorization': `Bearer ${token}` };
+  }
+  return {};
 };
 
 export const getWatchlist = async () => {
-  const headers = await getUserIdHeader();
+  const headers = await getAuthHeaders();
   return requestApi<WatchListItem[]>('/api/watchlist', { headers });
 };
 
 export const addToWatchlist = async (item: CreateWatchListItemRequest) => {
-  const headers = await getUserIdHeader();
+  const headers = await getAuthHeaders();
   return requestApi<string>('/api/watchlist', {
     method: 'POST',
     headers: {
@@ -26,7 +28,7 @@ export const addToWatchlist = async (item: CreateWatchListItemRequest) => {
 };
 
 export const removeFromWatchlist = async (tmdbId: number) => {
-  const headers = await getUserIdHeader();
+  const headers = await getAuthHeaders();
   return requestApi<string>(`/api/watchlist/${tmdbId}`, {
     method: 'DELETE',
     headers,
