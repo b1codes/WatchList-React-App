@@ -4,15 +4,16 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View, FlatList } from 'react-native';
 
-import { fetchMovieConfig, getMovieDetails } from '@/api/tmdb';
+import { fetchMovieConfig, getMovieDetails, getSimilarMovies, getRecommendedMovies } from '@/api/tmdb';
 import { addToWatchlist, getWatchlist, removeFromWatchlist } from '@/api/watchlist';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { CreateWatchListItemRequest } from '@/constants/types';
+import { MediaCard } from '@/components/MediaCard';
+import { CreateWatchListItemRequest, TmdbSearchResult } from '@/constants/types';
 
 const buildImageUrl = (baseUrl: string | null, size: string, path?: string | null) => {
   if (!baseUrl || !path) return null;
@@ -39,6 +40,18 @@ export default function MovieDetailsScreen() {
   const watchlistQuery = useQuery({
     queryKey: ['watchlist'],
     queryFn: getWatchlist,
+  });
+
+  const similarQuery = useQuery({
+    queryKey: ['similar-movies', movieId],
+    queryFn: () => getSimilarMovies(movieId),
+    enabled: Number.isFinite(movieId) && movieId > 0,
+  });
+
+  const recommendedQuery = useQuery({
+    queryKey: ['recommended-movies', movieId],
+    queryFn: () => getRecommendedMovies(movieId),
+    enabled: Number.isFinite(movieId) && movieId > 0,
   });
 
   const addMutation = useMutation({
@@ -94,6 +107,38 @@ export default function MovieDetailsScreen() {
   const crew = details?.credits?.crew ?? [];
   const directors = crew.filter(c => c.job === 'Director');
   const writers = crew.filter(c => c.job === 'Screenplay' || c.job === 'Writer' || c.department === 'Writing');
+
+  const handlePressMovie = (item: TmdbSearchResult) => {
+    // using router.push adds it to the navigation stack
+    router.push(`/movie/${item.id}`);
+  };
+
+  const renderRow = (title: string, items?: TmdbSearchResult[]) => {
+    if (!items || items.length === 0) return null;
+    return (
+      <ThemedView style={styles.rowSection}>
+        <ThemedText type="subtitle" style={styles.rowTitle}>
+          {title}
+        </ThemedText>
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id.toString()}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.rowContent}
+          renderItem={({ item }) => (
+            <MediaCard
+              item={item}
+              onPress={handlePressMovie}
+              width={130}
+              baseUrl={baseUrl}
+              style={styles.posterCard}
+            />
+          )}
+        />
+      </ThemedView>
+    );
+  };
 
   return (
     <ParallaxScrollView
@@ -208,6 +253,9 @@ export default function MovieDetailsScreen() {
             </View>
           </ThemedView>
         ) : null}
+
+        {renderRow('Similar Movies', similarQuery.data?.results)}
+        {renderRow('Recommended For You', recommendedQuery.data?.results)}
       </View>
     </ParallaxScrollView>
   );
@@ -339,5 +387,18 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 12,
     backgroundColor: '#2A2A2A',
+  },
+  rowSection: {
+    marginTop: 24,
+  },
+  rowTitle: {
+    marginBottom: 12,
+  },
+  rowContent: {
+    gap: 12,
+    paddingRight: 12,
+  },
+  posterCard: {
+    gap: 8,
   },
 });

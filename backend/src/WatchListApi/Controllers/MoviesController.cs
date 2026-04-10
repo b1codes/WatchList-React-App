@@ -72,5 +72,29 @@ namespace WatchListApi.Controllers
 
             return Ok(ApiResponse<MovieDetailsResponse>.Ok(response));
         }
+
+        [HttpGet("similar/{id:int}")]
+        public async Task<IActionResult> GetSimilar(int id, [FromQuery] int page = 1)
+        {
+            if (id <= 0)
+            {
+                return BadRequest(ApiResponse<string>.Fail("Id must be greater than zero."));
+            }
+
+            var results = await _tmdbService.GetSimilarMoviesAsync(id, page);
+            return Ok(ApiResponse<TmdbPagedResponse<TmdbSearchResult>?>.Ok(results));
+        }
+
+        [HttpGet("recommendations/{id:int}")]
+        public async Task<IActionResult> GetRecommendations(int id, [FromQuery] int page = 1)
+        {
+            if (id <= 0)
+            {
+                return BadRequest(ApiResponse<string>.Fail("Id must be greater than zero."));
+            }
+
+            var results = await _tmdbService.GetRecommendedMoviesAsync(id, page);
+            return Ok(ApiResponse<TmdbPagedResponse<TmdbSearchResult>?>.Ok(results));
+        }
     }
 }

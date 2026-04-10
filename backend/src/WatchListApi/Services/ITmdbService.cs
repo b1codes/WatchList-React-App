@@ -11,6 +11,8 @@ namespace WatchListApi.Services
         Task<TmdbPagedResponse<TmdbSearchResult>?> DiscoverAsync(int page = 1);
         Task<TmdbMovieDetails?> GetMovieDetailsAsync(int id);
         Task<TmdbWatchProvidersResponse?> GetWatchProvidersAsync(int id);
+        Task<TmdbPagedResponse<TmdbSearchResult>?> GetSimilarMoviesAsync(int id, int page = 1);
+        Task<TmdbPagedResponse<TmdbSearchResult>?> GetRecommendedMoviesAsync(int id, int page = 1);
         Task<T> GetCachedAsync<T>(string key, Func<Task<T>> fetchFunction);
     }
 }

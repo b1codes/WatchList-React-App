@@ -21,3 +21,9 @@ export const discoverMovies = (page = 1) =>
 
 export const getMovieDetails = (id: number) =>
   requestApi<MovieDetailsResponse | null>(`/api/movies/details/${id}`);
+
+export const getSimilarMovies = (id: number, page = 1) =>
+  requestApi<TmdbPagedResponse<TmdbSearchResult> | null>(`/api/movies/similar/${id}?page=${page}`);
+
+export const getRecommendedMovies = (id: number, page = 1) =>
+  requestApi<TmdbPagedResponse<TmdbSearchResult> | null>(`/api/movies/recommendations/${id}?page=${page}`);

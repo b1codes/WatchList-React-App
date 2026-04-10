@@ -65,6 +65,22 @@ namespace WatchListApi.Services
             return GetAsync<TmdbWatchProvidersResponse>(url);
         }
 
+        public Task<TmdbPagedResponse<TmdbSearchResult>?> GetSimilarMoviesAsync(int id, int page = 1)
+        {
+            var url = $"{_tmdbSettings.BaseUrl}/movie/{id}/similar?api_key={_tmdbSettings.ApiKey}&page={page}";
+            return GetCachedAsync(
+                $"tmdb:similar:{id}:{page}",
+                () => GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url));
+        }
+
+        public Task<TmdbPagedResponse<TmdbSearchResult>?> GetRecommendedMoviesAsync(int id, int page = 1)
+        {
+            var url = $"{_tmdbSettings.BaseUrl}/movie/{id}/recommendations?api_key={_tmdbSettings.ApiKey}&page={page}";
+            return GetCachedAsync(
+                $"tmdb:recommendations:{id}:{page}",
+                () => GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url));
+        }
+
         public Task<T> GetCachedAsync<T>(string key, Func<Task<T>> fetchFunction)
         {
             return _cache.GetOrCreateAsync(key, async entry =>
