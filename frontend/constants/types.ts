@@ -102,11 +102,16 @@ export type TmdbVideoGroup = {
 export type TmdbMovieDetails = {
   id: number;
   title?: string | null;
+  name?: string | null;
   overview?: string | null;
   tagline?: string | null;
   poster_path?: string | null;
   release_date?: string | null;
+  first_air_date?: string | null;
   runtime?: number | null;
+  episode_run_time?: number[] | null;
+  number_of_seasons?: number | null;
+  number_of_episodes?: number | null;
   genres: TmdbGenre[];
   credits?: TmdbCredits | null;
   videos?: TmdbVideoGroup | null;
