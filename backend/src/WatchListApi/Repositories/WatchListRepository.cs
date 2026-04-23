@@ -13,22 +13,31 @@ public class WatchListRepository
         _firestoreDb = firestoreDb;
     }
 
-    public async Task<List<WatchListItem>> GetWatchlistByUserIdAsync(string userId)
+    public async Task<PagedResponse<WatchListItem>> GetWatchlistByUserIdAsync(string userId, int pageSize = 20, Timestamp? lastAddedDate = null)
     {
         CollectionReference collection = _firestoreDb.Collection(CollectionName);
-        Query query = collection.WhereEqualTo("UserId", userId);
-        QuerySnapshot snapshot = await query.GetSnapshotAsync();
+        Query query = collection.WhereEqualTo("UserId", userId)
+                              .OrderByDescending("AddedDate")
+                              .Limit(pageSize + 1); // Get one extra to check for next page
 
-        var items = new List<WatchListItem>();
-        foreach (DocumentSnapshot document in snapshot.Documents)
+        if (lastAddedDate != null)
         {
-            if (document.Exists)
-            {
-                items.Add(document.ConvertTo<WatchListItem>());
-            }
+            query = query.StartAfter(lastAddedDate);
         }
 
-        return items;
+        QuerySnapshot snapshot = await query.GetSnapshotAsync();
+        var items = snapshot.Documents.Select(d => d.ConvertTo<WatchListItem>()).ToList();
+
+        bool hasNext = items.Count > pageSize;
+        if (hasNext) items.RemoveAt(pageSize);
+
+        string? nextCursor = hasNext ? items.Last().AddedDate?.ToDateTime().Ticks.ToString() : null;
+
+        return new PagedResponse<WatchListItem>
+        {
+            Items = items,
+            NextCursor = nextCursor
+        };
     }
 
     public async Task AddToWatchlistAsync(string userId, CreateWatchListItemRequest newItem)

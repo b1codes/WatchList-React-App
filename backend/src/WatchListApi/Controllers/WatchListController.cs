@@ -1,3 +1,4 @@
+using Google.Cloud.Firestore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -19,7 +20,7 @@ public class WatchListController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> Get()
+    public async Task<IActionResult> Get([FromQuery] int pageSize = 20, [FromQuery] long? lastAddedDateSeconds = null, [FromQuery] int? lastAddedDateNanos = null)
     {
         var userId = GetUserId();
         if (string.IsNullOrWhiteSpace(userId))
@@ -27,8 +28,14 @@ public class WatchListController : ControllerBase
             return Unauthorized(ApiResponse<string>.Fail("Missing user context."));
         }
 
-        var items = await _watchListRepository.GetWatchlistByUserIdAsync(userId);
-        return Ok(ApiResponse<List<WatchListItem>>.Ok(items));
+        Google.Cloud.Firestore.Timestamp? lastAddedDate = null;
+        if (lastAddedDateSeconds.HasValue)
+        {
+            lastAddedDate = Google.Cloud.Firestore.Timestamp.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(lastAddedDateSeconds.Value).UtcDateTime);
+        }
+
+        var result = await _watchListRepository.GetWatchlistByUserIdAsync(userId, pageSize, lastAddedDate);
+        return Ok(ApiResponse<PagedResponse<WatchListItem>>.Ok(result));
     }
 
     [HttpPost]
