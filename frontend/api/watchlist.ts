@@ -1,5 +1,5 @@
 import { requestApi } from '@/api/client';
-import { CreateWatchListItemRequest, WatchListItem } from '@/constants/types';
+import { CreateWatchListItemRequest, PagedResponse, WatchListItem } from '@/constants/types';
 import { auth } from '@/config/firebase';
 
 const getAuthHeaders = async (): Promise<Record<string, string>> => {
@@ -10,9 +10,16 @@ const getAuthHeaders = async (): Promise<Record<string, string>> => {
   return {};
 };
 
-export const getWatchlist = async () => {
+export const getWatchlist = async (pageSize = 20, lastAddedDateSeconds?: number, lastAddedDateNanos?: number) => {
   const headers = await getAuthHeaders();
-  return requestApi<WatchListItem[]>('/api/watchlist', { headers });
+  let url = `/api/watchlist?pageSize=${pageSize}`;
+  if (lastAddedDateSeconds !== undefined) {
+    url += `&lastAddedDateSeconds=${lastAddedDateSeconds}`;
+  }
+  if (lastAddedDateNanos !== undefined) {
+    url += `&lastAddedDateNanos=${lastAddedDateNanos}`;
+  }
+  return requestApi<PagedResponse<WatchListItem>>(url, { headers });
 };
 
 export const addToWatchlist = async (item: CreateWatchListItemRequest) => {

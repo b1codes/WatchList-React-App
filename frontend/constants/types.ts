@@ -136,7 +136,40 @@ export type TmdbWatchProvidersResponse = {
   results: Record<string, TmdbWatchProviderRegion>;
 };
 
+export type MediaDto = {
+  id: number;
+  title: string;
+  mediaType: string;
+  releaseDate?: string | null;
+  posterPath?: string | null;
+};
+
+export type CastMemberDto = {
+  id: number;
+  name: string;
+  character?: string | null;
+  profilePath?: string | null;
+};
+
+export type MediaDetailsDto = {
+  id: number;
+  title: string;
+  overview?: string | null;
+  tagline?: string | null;
+  posterPath?: string | null;
+  releaseDate?: string | null;
+  runtime?: number | null;
+  genres: string[];
+  cast: CastMemberDto[];
+};
+
+export type PagedResponse<T> = {
+  items: T[];
+  nextCursor?: string | null;
+  totalCount?: number;
+};
+
 export type MovieDetailsResponse = {
-  details?: TmdbMovieDetails | null;
+  details?: MediaDetailsDto | null;
   providers?: TmdbWatchProvidersResponse | null;
 };

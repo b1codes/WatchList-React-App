@@ -3,12 +3,12 @@ import { Image } from 'expo-image';
 import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { TmdbSearchResult } from '@/constants/types';
+import { MediaDto } from '@/constants/types';
 import { useMemo } from 'react';
 
 type MediaCardProps = {
-    item: TmdbSearchResult;
-    onPress: (item: TmdbSearchResult) => void;
+    item: MediaDto;
+    onPress: (item: MediaDto) => void;
     width: number;
     baseUrl?: string | null;
     style?: ViewStyle;
@@ -16,15 +16,14 @@ type MediaCardProps = {
 
 export function MediaCard({ item, onPress, width, baseUrl, style }: MediaCardProps) {
     const posterUrl = useMemo(() => {
-        if (!baseUrl || !item.poster_path) return null;
-        return `${baseUrl}w342${item.poster_path}`;
-    }, [baseUrl, item.poster_path]);
+        if (!baseUrl || !item.posterPath) return null;
+        return `${baseUrl}w342${item.posterPath}`;
+    }, [baseUrl, item.posterPath]);
 
-    const name = item.title ?? item.name ?? 'Untitled';
+    const name = item.title || 'Untitled';
 
     // Determine media type label. Default to 'Movie' if not 'tv'.
-    // The 'discover' endpoint typically returns movies, and 'trending' returns mixed.
-    const isTv = item.media_type === 'tv';
+    const isTv = item.mediaType === 'tv';
     const typeLabel = isTv ? 'TV' : 'Movie';
 
     // Define chip color based on type for better visual distinction (optional, but good for UI)

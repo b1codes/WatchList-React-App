@@ -13,7 +13,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { MediaCard } from '@/components/MediaCard';
-import { CreateWatchListItemRequest, TmdbSearchResult } from '@/constants/types';
+import { CreateWatchListItemRequest, MediaDto } from '@/constants/types';
 
 const buildImageUrl = (baseUrl: string | null, size: string, path?: string | null) => {
   if (!baseUrl || !path) return null;
@@ -40,7 +40,7 @@ export default function MovieDetailsScreen() {
 
   const watchlistQuery = useQuery({
     queryKey: ['watchlist'],
-    queryFn: getWatchlist,
+    queryFn: () => getWatchlist(),
   });
 
   const similarQuery = useQuery({
@@ -73,15 +73,14 @@ export default function MovieDetailsScreen() {
 
   const baseUrl = configQuery.data?.images?.secure_base_url ?? null;
   const details = detailsQuery.data?.details ?? null;
-  const posterUrl = buildImageUrl(baseUrl, 'w780', details?.poster_path);
+  const posterUrl = buildImageUrl(baseUrl, 'w780', details?.posterPath);
 
-  const title = details?.title ?? details?.name ?? 'Loading...';
-  const rawDate = details?.release_date || details?.first_air_date;
-  const releaseYear = rawDate ? rawDate.slice(0, 4) : null;
-  const runtime = details?.runtime ?? details?.episode_run_time?.[0];
+  const title = details?.title ?? 'Loading...';
+  const releaseYear = details?.releaseDate ? details.releaseDate.slice(0, 4) : null;
+  const runtime = details?.runtime;
 
   const isInWatchlist = Boolean(
-    watchlistQuery.data?.some((item) => item.tmdbId === movieId),
+    watchlistQuery.data?.items?.some((item) => item.tmdbId === movieId),
   );
 
   const handleToggleWatchlist = () => {
@@ -95,7 +94,7 @@ export default function MovieDetailsScreen() {
       tmdbId: movieId,
       title: title,
       type: mediaType,
-      posterPath: details.poster_path ?? null,
+      posterPath: details.posterPath ?? null,
       releaseYear: releaseYear ? Number(releaseYear) : null,
     };
 
@@ -107,17 +106,14 @@ export default function MovieDetailsScreen() {
     return regionMap.US ?? Object.values(regionMap)[0] ?? null;
   }, [detailsQuery.data?.providers?.results]);
 
-  const cast = details?.credits?.cast?.slice(0, 15) ?? [];
-  const crew = details?.credits?.crew ?? [];
-  const directors = crew.filter(c => c.job === 'Director');
-  const writers = crew.filter(c => c.job === 'Screenplay' || c.job === 'Writer' || c.department === 'Writing');
+  const cast = details?.cast?.slice(0, 15) ?? [];
 
-  const handlePressMovie = (item: TmdbSearchResult) => {
+  const handlePressMovie = (item: MediaDto) => {
     // using router.push adds it to the navigation stack
-    router.push(`/movie/${item.id}?type=${item.media_type || mediaType}`);
+    router.push(`/movie/${item.id}?type=${item.mediaType || mediaType}`);
   };
 
-  const renderRow = (title: string, items?: TmdbSearchResult[]) => {
+  const renderRow = (title: string, items?: MediaDto[]) => {
     if (!items || items.length === 0) return null;
     return (
       <ThemedView style={styles.rowSection}>
@@ -201,27 +197,6 @@ export default function MovieDetailsScreen() {
           <ThemedText style={styles.overview}>{details.overview}</ThemedText>
         ) : null}
 
-        {/* Top Billing / Key Crew */}
-        {directors.length > 0 && (
-          <View style={styles.metaRow}>
-            <ThemedText style={styles.metaLabel}>Director:</ThemedText>
-            <ThemedText style={styles.metaValue}>{directors.map(d => d.name).join(', ')}</ThemedText>
-          </View>
-        )}
-        {writers.length > 0 && (
-          <View style={styles.metaRow}>
-            <ThemedText style={styles.metaLabel}>Writers:</ThemedText>
-            <ThemedText style={styles.metaValue}>{writers.slice(0, 3).map(d => d.name).join(', ')}</ThemedText>
-          </View>
-        )}
-
-        {mediaType === 'tv' && details?.number_of_seasons && details?.number_of_episodes ? (
-          <View style={styles.metaRow}>
-            <ThemedText style={styles.metaLabel}>TV Stats:</ThemedText>
-            <ThemedText style={styles.metaValue}>{details.number_of_seasons} Seasons, {details.number_of_episodes} Episodes</ThemedText>
-          </View>
-        ) : null}
-
         {/* Cast Section */}
         {cast.length > 0 && (
           <View style={styles.sectionContainer}>
@@ -230,7 +205,7 @@ export default function MovieDetailsScreen() {
               {cast.map((member) => (
                 <View key={member.id} style={styles.castCard}>
                   <Image
-                    source={{ uri: buildImageUrl(baseUrl, 'w185', member.profile_path) ?? undefined }}
+                    source={{ uri: buildImageUrl(baseUrl, 'w185', member.profilePath) ?? undefined }}
                     style={styles.castImage}
                     contentFit="cover"
                   />
@@ -265,8 +240,8 @@ export default function MovieDetailsScreen() {
           </ThemedView>
         ) : null}
 
-        {renderRow('Similar Movies', similarQuery.data?.results)}
-        {renderRow('Recommended For You', recommendedQuery.data?.results)}
+        {renderRow('Similar Movies', similarQuery.data?.items)}
+        {renderRow('Recommended For You', recommendedQuery.data?.items)}
       </View>
     </ParallaxScrollView>
   );

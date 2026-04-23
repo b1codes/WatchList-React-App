@@ -10,7 +10,7 @@ import { MediaCard } from '@/components/MediaCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Fonts } from '@/constants/theme';
-import { TmdbSearchResult } from '@/constants/types';
+import { MediaDto } from '@/constants/types';
 
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
@@ -38,18 +38,18 @@ export default function HomeScreen() {
   const { isMobile } = useResponsiveLayout();
 
   const baseUrl = configQuery.data?.images?.secure_base_url ?? null;
-  const heroItem = trendingQuery.data?.results?.[0] ?? null;
+  const heroItem = trendingQuery.data?.items?.[0] ?? null;
 
   const heroPoster = useMemo(
-    () => buildImageUrl(baseUrl, 'w780', heroItem?.poster_path),
-    [baseUrl, heroItem?.poster_path],
+    () => buildImageUrl(baseUrl, 'w780', heroItem?.posterPath),
+    [baseUrl, heroItem?.posterPath],
   );
 
-  const handlePressMovie = (item: TmdbSearchResult) => {
-    router.push(`/movie/${item.id}?type=${item.media_type || 'movie'}`);
+  const handlePressMovie = (item: MediaDto) => {
+    router.push(`/movie/${item.id}?type=${item.mediaType || 'movie'}`);
   };
 
-  const renderRow = (title: string, items?: TmdbSearchResult[]) => (
+  const renderRow = (title: string, items?: MediaDto[]) => (
     <ThemedView style={styles.rowSection}>
       <ThemedText type="subtitle" style={styles.rowTitle}>
         {title}
@@ -99,7 +99,7 @@ export default function HomeScreen() {
       {heroItem ? (
         <Pressable style={styles.heroCard} onPress={() => handlePressMovie(heroItem)}>
           <ThemedText type="subtitle" style={styles.heroTitle}>
-            {heroItem.title ?? heroItem.name}
+            {heroItem.title}
           </ThemedText>
           <ThemedText numberOfLines={3} style={styles.heroCaption}>
             Trending now
@@ -107,8 +107,8 @@ export default function HomeScreen() {
         </Pressable>
       ) : null}
 
-      {renderRow('Trending Now', trendingQuery.data?.results ?? [])}
-      {renderRow('New Releases', discoverQuery.data?.results ?? [])}
+      {renderRow('Trending Now', trendingQuery.data?.items ?? [])}
+      {renderRow('New Releases', discoverQuery.data?.items ?? [])}
     </ParallaxScrollView>
   );
 }

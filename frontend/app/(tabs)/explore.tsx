@@ -18,7 +18,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts } from '@/constants/theme';
-import { TmdbSearchResult } from '@/constants/types';
+import { MediaDto } from '@/constants/types';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
@@ -55,11 +55,11 @@ export default function TabTwoScreen() {
 
   const searchQuery = useInfiniteQuery({
     queryKey: ['search', debouncedQuery],
-    queryFn: ({ pageParam }) => searchMovies(debouncedQuery, pageParam),
+    queryFn: ({ pageParam }) => searchMovies(debouncedQuery, pageParam as number),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => {
-      if (!lastPage || lastPage.page >= lastPage.total_pages) return undefined;
-      return lastPage.page + 1;
+      if (!lastPage || !lastPage.nextCursor) return undefined;
+      return parseInt(lastPage.nextCursor, 10);
     },
     enabled: Boolean(debouncedQuery),
   });
@@ -72,20 +72,20 @@ export default function TabTwoScreen() {
     return (path: string | null | undefined) => (path ? `${configBaseUrl}w500${path}` : null);
   }, [configQuery.data?.images?.secure_base_url]);
 
-  const searchResults = (searchQuery.data?.pages.flatMap((page) => page?.results ?? []) ?? []).filter(
-    (result) => result.media_type !== 'person',
+  const searchResults = (searchQuery.data?.pages.flatMap((page) => page?.items ?? []) ?? []).filter(
+    (result) => result.mediaType !== 'person',
   );
 
-  const trendingResults = (trendingQuery.data?.results ?? []).filter(
-    (result) => result.media_type !== 'person',
+  const trendingResults = (trendingQuery.data?.items ?? []).filter(
+    (result) => result.mediaType !== 'person',
   );
 
   const results = debouncedQuery ? searchResults : trendingResults;
 
   const suggestedTags = ['Oppenheimer', 'Animated', 'Marvel', 'Drama', 'Comedy', 'Thriller'];
 
-  const handlePressItem = (item: TmdbSearchResult) => {
-    router.push(`/movie/${item.id}?type=${item.media_type || 'movie'}`);
+  const handlePressItem = (item: MediaDto) => {
+    router.push(`/movie/${item.id}?type=${item.mediaType || 'movie'}`);
   };
 
   const backgroundColor = useThemeColor({}, 'background');
