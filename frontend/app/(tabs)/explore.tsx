@@ -22,7 +22,9 @@ import { MediaDto } from '@/constants/types';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
-export default function TabTwoScreen() {
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+function ExploreContent() {
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -180,6 +182,15 @@ export default function TabTwoScreen() {
     </SafeAreaView>
   );
 }
+
+export default function TabTwoScreen() {
+  return (
+    <ErrorBoundary>
+      <ExploreContent />
+    </ErrorBoundary>
+  );
+}
+
 
 const styles = StyleSheet.create({
   headerContent: {

@@ -15,12 +15,14 @@ import { MediaDto } from '@/constants/types';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
 const buildImageUrl = (baseUrl: string | null, size: string, path?: string | null) => {
   if (!baseUrl || !path) return null;
   return `${baseUrl}${size}${path}`;
 };
 
-export default function HomeScreen() {
+function HomeContent() {
   const router = useRouter();
   const configQuery = useQuery({
     queryKey: ['tmdb-config'],
@@ -112,6 +114,15 @@ export default function HomeScreen() {
     </ParallaxScrollView>
   );
 }
+
+export default function HomeScreen() {
+  return (
+    <ErrorBoundary>
+      <HomeContent />
+    </ErrorBoundary>
+  );
+}
+
 
 const styles = StyleSheet.create({
   titleContainer: {

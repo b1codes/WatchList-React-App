@@ -10,6 +10,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { IconSymbol } from '@/components/ui/icon-symbol'; // Import IconSymbol
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { useEffect } from 'react';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -37,37 +38,39 @@ function RootLayoutNav() {
   }, [user, loading, segments, router]);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="login" options={{ headerShown: false }} />
-        <Stack.Screen name="register" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="movie/[id]"
-          options={{
-            headerShown: true, // Show header
-            headerTransparent: true, // Make header transparent
-            headerTitle: '', // Hide header title
-            headerLeft: () => (
-              <Pressable onPress={() => router.back()} style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(0,0,0,0.5)', // Semi-transparent
-                marginLeft: 16, // Adjust position
-                marginTop: 8, // Adjust position to be a bit lower
-              }}>
-                <IconSymbol size={20} name="chevron.left" color="#EDEDED" />
-              </Pressable>
-            ),
-          }}
-        />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="register" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="movie/[id]"
+            options={{
+              headerShown: true, // Show header
+              headerTransparent: true, // Make header transparent
+              headerTitle: '', // Hide header title
+              headerLeft: () => (
+                <Pressable onPress={() => router.back()} style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'rgba(0,0,0,0.5)', // Semi-transparent
+                  marginLeft: 16, // Adjust position
+                  marginTop: 8, // Adjust position to be a bit lower
+                }}>
+                  <IconSymbol size={20} name="chevron.left" color="#EDEDED" />
+                </Pressable>
+              ),
+            }}
+          />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }
 

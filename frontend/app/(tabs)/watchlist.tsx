@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
 import { fetchMovieConfig } from '@/api/tmdb';
@@ -14,6 +14,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { WatchListItem } from '@/constants/types';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { FlatList } from 'react-native';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const buildImageUrl = (baseUrl: string | null, size: string, path?: string | null) => {
   if (!baseUrl || !path) return null;
@@ -28,7 +29,7 @@ const FILTERS = [
 
 type FilterKey = (typeof FILTERS)[number]['key'];
 
-export default function WatchlistScreen() {
+function WatchlistContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<FilterKey>('all');
@@ -37,9 +38,20 @@ export default function WatchlistScreen() {
     queryKey: ['tmdb-config'],
     queryFn: fetchMovieConfig,
   });
-  const watchlistQuery = useQuery({
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    refetch,
+  } = useInfiniteQuery({
     queryKey: ['watchlist'],
-    queryFn: getWatchlist,
+    queryFn: ({ pageParam }) => getWatchlist(20, pageParam as number | undefined),
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (lastPage) => (lastPage?.nextCursor ? parseInt(lastPage.nextCursor, 10) : undefined),
   });
 
   const removeMutation = useMutation({
@@ -53,11 +65,10 @@ export default function WatchlistScreen() {
   const baseUrl = configQuery.data?.images?.secure_base_url ?? null;
 
   const items = useMemo(() => {
-    const list = [...(watchlistQuery.data ?? [])];
-    list.sort((a, b) => (b.addedDate?.seconds ?? 0) - (a.addedDate?.seconds ?? 0));
-    if (filter === 'all') return list;
-    return list.filter((item) => item.type.toLowerCase() === filter);
-  }, [watchlistQuery.data, filter]);
+    const allItems = data?.pages.flatMap((page) => page?.items ?? []) ?? [];
+    if (filter === 'all') return allItems;
+    return allItems.filter((item) => item.type.toLowerCase() === filter);
+  }, [data?.pages, filter]);
 
   const { numColumns, itemWidth, gap } = useResponsiveLayout({
     mobileColumns: 1, // List view on mobile
@@ -75,6 +86,17 @@ export default function WatchlistScreen() {
       <ThemedText style={styles.deleteText}>Remove</ThemedText>
     </Pressable>
   );
+
+  if (isError) {
+    return (
+      <ThemedView style={styles.center}>
+        <ThemedText>Failed to load watchlist.</ThemedText>
+        <Pressable style={styles.retryButton} onPress={() => refetch()}>
+          <ThemedText style={styles.retryText}>Retry</ThemedText>
+        </Pressable>
+      </ThemedView>
+    );
+  }
 
   return (
     <ThemedView style={styles.container}>
@@ -100,7 +122,9 @@ export default function WatchlistScreen() {
       </View>
 
       <View style={styles.list}>
-        {items.length === 0 ? (
+        {isLoading ? (
+          <ActivityIndicator size="large" style={{ marginTop: 40 }} />
+        ) : items.length === 0 ? (
           <ThemedText style={styles.emptyState}>No items yet. Start exploring.</ThemedText>
         ) : (
           <FlatList
@@ -108,8 +132,19 @@ export default function WatchlistScreen() {
             data={items}
             keyExtractor={(item) => `${item.tmdbId}-${item.id ?? 'item'}`}
             numColumns={numColumns}
-            contentContainerStyle={{ gap }}
+            contentContainerStyle={{ gap, paddingBottom: 100 }}
             columnWrapperStyle={numColumns > 1 ? { gap } : undefined}
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <ActivityIndicator size="small" style={{ marginVertical: 16 }} />
+              ) : null
+            }
             renderItem={({ item }) => {
               const posterUrl = buildImageUrl(baseUrl, 'w342', item.posterPath);
               return (
@@ -118,7 +153,7 @@ export default function WatchlistScreen() {
                     renderRightActions={() => renderRightActions(item)}>
                     <Pressable
                       style={styles.row}
-                      onPress={() => router.push(`/movie/${item.tmdbId}`)}>
+                      onPress={() => router.push(`/movie/${item.tmdbId}?type=${item.type}`)}>
                       {posterUrl ? (
                         <Image
                           source={{ uri: posterUrl }}
@@ -145,6 +180,14 @@ export default function WatchlistScreen() {
         )}
       </View>
     </ThemedView >
+  );
+}
+
+export default function WatchlistScreen() {
+  return (
+    <ErrorBoundary>
+      <WatchlistContent />
+    </ErrorBoundary>
   );
 }
 
@@ -182,7 +225,7 @@ const styles = StyleSheet.create({
     color: '#121212',
   },
   list: {
-    gap: 12,
+    flex: 1,
   },
   row: {
     flexDirection: 'row',
@@ -230,5 +273,21 @@ const styles = StyleSheet.create({
     color: '#9C9C9C',
     textAlign: 'center',
     marginTop: 40,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  retryButton: {
+    backgroundColor: '#F5C518',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: '#121212',
+    fontWeight: 'bold',
   },
 });

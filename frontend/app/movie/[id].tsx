@@ -15,12 +15,14 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { MediaCard } from '@/components/MediaCard';
 import { CreateWatchListItemRequest, MediaDto } from '@/constants/types';
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
 const buildImageUrl = (baseUrl: string | null, size: string, path?: string | null) => {
   if (!baseUrl || !path) return null;
   return `${baseUrl}${size}${path}`;
 };
 
-export default function MovieDetailsScreen() {
+function MovieDetailsContent() {
   const router = useRouter();
   const { id, type: typeParam } = useLocalSearchParams();
   const movieId = Number(Array.isArray(id) ? id[0] : id);
@@ -246,6 +248,15 @@ export default function MovieDetailsScreen() {
     </ParallaxScrollView>
   );
 }
+
+export default function MovieDetailsScreen() {
+  return (
+    <ErrorBoundary>
+      <MovieDetailsContent />
+    </ErrorBoundary>
+  );
+}
+
 
 const styles = StyleSheet.create({
   headerImageContainer: {
