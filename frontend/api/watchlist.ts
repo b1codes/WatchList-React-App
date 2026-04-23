@@ -10,14 +10,13 @@ const getAuthHeaders = async (): Promise<Record<string, string>> => {
   return {};
 };
 
-export const getWatchlist = async (pageSize = 20, lastAddedDateSeconds?: number, lastAddedDateNanos?: number) => {
+export const getWatchlist = async (pageSize = 20, cursor?: string) => {
   const headers = await getAuthHeaders();
   let url = `/api/watchlist?pageSize=${pageSize}`;
-  if (lastAddedDateSeconds !== undefined) {
-    url += `&lastAddedDateSeconds=${lastAddedDateSeconds}`;
-  }
-  if (lastAddedDateNanos !== undefined) {
-    url += `&lastAddedDateNanos=${lastAddedDateNanos}`;
+  if (cursor) {
+    const [seconds, nanos] = cursor.split('.');
+    if (seconds) url += `&lastAddedDateSeconds=${seconds}`;
+    if (nanos) url += `&lastAddedDateNanos=${nanos}`;
   }
   return requestApi<PagedResponse<WatchListItem>>(url, { headers });
 };

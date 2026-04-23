@@ -49,9 +49,9 @@ function WatchlistContent() {
     refetch,
   } = useInfiniteQuery({
     queryKey: ['watchlist'],
-    queryFn: ({ pageParam }) => getWatchlist(20, pageParam as number | undefined),
-    initialPageParam: undefined as number | undefined,
-    getNextPageParam: (lastPage) => (lastPage?.nextCursor ? parseInt(lastPage.nextCursor, 10) : undefined),
+    queryFn: ({ pageParam }) => getWatchlist(20, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
   });
 
   const removeMutation = useMutation({
