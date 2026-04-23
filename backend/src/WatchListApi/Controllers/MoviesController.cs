@@ -32,14 +32,14 @@ namespace WatchListApi.Controllers
             }
 
             var results = await _tmdbService.SearchMultiAsync(query, page);
-            return Ok(ApiResponse<TmdbPagedResponse<TmdbSearchResult>?>.Ok(results));
+            return Ok(ApiResponse<PagedResponse<MediaDto>?>.Ok(results));
         }
 
         [HttpGet("trending")]
         public async Task<IActionResult> GetTrending()
         {
             var results = await _tmdbService.GetTrendingAsync();
-            return Ok(ApiResponse<TmdbPagedResponse<TmdbSearchResult>?>.Ok(results));
+            return Ok(ApiResponse<PagedResponse<MediaDto>?>.Ok(results));
         }
 
         [HttpGet("discover")]
@@ -51,7 +51,7 @@ namespace WatchListApi.Controllers
             }
 
             var results = await _tmdbService.DiscoverAsync(page);
-            return Ok(ApiResponse<TmdbPagedResponse<TmdbSearchResult>?>.Ok(results));
+            return Ok(ApiResponse<PagedResponse<MediaDto>?>.Ok(results));
         }
 
         [HttpGet("details/{id:int}")]
@@ -62,7 +62,7 @@ namespace WatchListApi.Controllers
                 return BadRequest(ApiResponse<string>.Fail("Id must be greater than zero."));
             }
 
-            var details = await _tmdbService.GetMovieDetailsAsync(id, type);
+            var details = await _tmdbService.GetMediaDetailsAsync(id, type);
             var providers = await _tmdbService.GetWatchProvidersAsync(id, type);
             var response = new MovieDetailsResponse
             {
@@ -82,7 +82,7 @@ namespace WatchListApi.Controllers
             }
 
             var results = await _tmdbService.GetSimilarMoviesAsync(id, page, type);
-            return Ok(ApiResponse<TmdbPagedResponse<TmdbSearchResult>?>.Ok(results));
+            return Ok(ApiResponse<PagedResponse<MediaDto>?>.Ok(results));
         }
 
         [HttpGet("recommendations/{id:int}")]
@@ -94,7 +94,7 @@ namespace WatchListApi.Controllers
             }
 
             var results = await _tmdbService.GetRecommendedMoviesAsync(id, page, type);
-            return Ok(ApiResponse<TmdbPagedResponse<TmdbSearchResult>?>.Ok(results));
+            return Ok(ApiResponse<PagedResponse<MediaDto>?>.Ok(results));
         }
     }
 }

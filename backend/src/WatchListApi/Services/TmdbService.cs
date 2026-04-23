@@ -32,31 +32,41 @@ namespace WatchListApi.Services
                 () => GetAsync<TmdbConfiguration>($"{_tmdbSettings.BaseUrl}/configuration?api_key={_tmdbSettings.ApiKey}"));
         }
 
-        public Task<TmdbPagedResponse<TmdbSearchResult>?> SearchMultiAsync(string query, int page = 1)
+        public async Task<PagedResponse<MediaDto>?> SearchMultiAsync(string query, int page = 1)
         {
             var url = $"{_tmdbSettings.BaseUrl}/search/multi?api_key={_tmdbSettings.ApiKey}&query={Uri.EscapeDataString(query)}&page={page}";
-            return GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url);
+            var response = await GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url);
+            return MapToPagedResponse(response);
         }
 
-        public Task<TmdbPagedResponse<TmdbSearchResult>?> GetTrendingAsync()
+        public async Task<PagedResponse<MediaDto>?> GetTrendingAsync()
         {
-            return GetCachedAsync(
+            return await GetCachedAsync(
                 "tmdb:trending",
-                () => GetAsync<TmdbPagedResponse<TmdbSearchResult>>($"{_tmdbSettings.BaseUrl}/trending/all/day?api_key={_tmdbSettings.ApiKey}"));
+                async () =>
+                {
+                    var response = await GetAsync<TmdbPagedResponse<TmdbSearchResult>>($"{_tmdbSettings.BaseUrl}/trending/all/day?api_key={_tmdbSettings.ApiKey}");
+                    return MapToPagedResponse(response);
+                });
         }
 
-        public Task<TmdbPagedResponse<TmdbSearchResult>?> DiscoverAsync(int page = 1)
+        public async Task<PagedResponse<MediaDto>?> DiscoverAsync(int page = 1)
         {
             var url = $"{_tmdbSettings.BaseUrl}/discover/movie?api_key={_tmdbSettings.ApiKey}&page={page}&sort_by=popularity.desc";
-            return GetCachedAsync(
+            return await GetCachedAsync(
                 $"tmdb:discover:{page}",
-                () => GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url));
+                async () =>
+                {
+                    var response = await GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url);
+                    return MapToPagedResponse(response);
+                });
         }
 
-        public Task<TmdbMovieDetails?> GetMovieDetailsAsync(int id, string type = "movie")
+        public async Task<MediaDetailsDto?> GetMediaDetailsAsync(int id, string type = "movie")
         {
             var url = $"{_tmdbSettings.BaseUrl}/{type}/{id}?api_key={_tmdbSettings.ApiKey}&append_to_response=credits,videos";
-            return GetAsync<TmdbMovieDetails>(url);
+            var details = await GetAsync<TmdbMovieDetails>(url);
+            return details != null ? MapToMediaDetailsDto(details) : null;
         }
 
         public Task<TmdbWatchProvidersResponse?> GetWatchProvidersAsync(int id, string type = "movie")
@@ -65,20 +75,62 @@ namespace WatchListApi.Services
             return GetAsync<TmdbWatchProvidersResponse>(url);
         }
 
-        public Task<TmdbPagedResponse<TmdbSearchResult>?> GetSimilarMoviesAsync(int id, int page = 1, string type = "movie")
+        public async Task<PagedResponse<MediaDto>?> GetSimilarMoviesAsync(int id, int page = 1, string type = "movie")
         {
             var url = $"{_tmdbSettings.BaseUrl}/{type}/{id}/similar?api_key={_tmdbSettings.ApiKey}&page={page}";
-            return GetCachedAsync(
+            return await GetCachedAsync(
                 $"tmdb:similar:{type}:{id}:{page}",
-                () => GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url));
+                async () =>
+                {
+                    var response = await GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url);
+                    return MapToPagedResponse(response);
+                });
         }
 
-        public Task<TmdbPagedResponse<TmdbSearchResult>?> GetRecommendedMoviesAsync(int id, int page = 1, string type = "movie")
+        public async Task<PagedResponse<MediaDto>?> GetRecommendedMoviesAsync(int id, int page = 1, string type = "movie")
         {
             var url = $"{_tmdbSettings.BaseUrl}/{type}/{id}/recommendations?api_key={_tmdbSettings.ApiKey}&page={page}";
-            return GetCachedAsync(
+            return await GetCachedAsync(
                 $"tmdb:recommendations:{type}:{id}:{page}",
-                () => GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url));
+                async () =>
+                {
+                    var response = await GetAsync<TmdbPagedResponse<TmdbSearchResult>>(url);
+                    return MapToPagedResponse(response);
+                });
+        }
+
+        private MediaDto MapToMediaDto(TmdbSearchResult result) => new()
+        {
+            Id = result.Id,
+            Title = result.Title ?? result.Name ?? "Unknown",
+            MediaType = result.MediaType ?? "movie",
+            ReleaseDate = result.ReleaseDate ?? result.FirstAirDate,
+            PosterPath = result.PosterPath
+        };
+
+        private MediaDetailsDto MapToMediaDetailsDto(TmdbMovieDetails details) => new()
+        {
+            Id = details.Id,
+            Title = details.Title ?? details.Name ?? "Unknown",
+            Overview = details.Overview,
+            Tagline = details.Tagline,
+            PosterPath = details.PosterPath,
+            ReleaseDate = details.ReleaseDate ?? details.FirstAirDate,
+            Runtime = details.Runtime ?? (details.EpisodeRunTime?.FirstOrDefault()),
+            Genres = details.Genres.Select(g => g.Name ?? "").Where(n => !string.IsNullOrEmpty(n)).ToList(),
+            Cast = details.Credits?.Cast.Take(10).Select(c => new CastMemberDto(c.Id, c.Name ?? "", c.Character, c.ProfilePath)).ToList() ?? new()
+        };
+
+        private PagedResponse<MediaDto>? MapToPagedResponse(TmdbPagedResponse<TmdbSearchResult>? response)
+        {
+            if (response == null) return null;
+
+            return new PagedResponse<MediaDto>
+            {
+                Items = response.Results.Select(MapToMediaDto).ToList(),
+                TotalCount = response.TotalResults,
+                NextCursor = response.Page < response.TotalPages ? (response.Page + 1).ToString() : null
+            };
         }
 
         public Task<T> GetCachedAsync<T>(string key, Func<Task<T>> fetchFunction)
