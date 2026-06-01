@@ -2,11 +2,11 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { useAuth } from '@/context/AuthContext';
+import { useAppSelector } from '@/store/hooks';
 import { auth } from '@/config/firebase';
 
 export default function SettingsScreen() {
-  const { user } = useAuth();
+  const user = useAppSelector((state) => state.auth.user);
 
   const handleSignOut = async () => {
     await auth.signOut();

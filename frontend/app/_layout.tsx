@@ -1,28 +1,46 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Pressable, View } from 'react-native'; // Import View for styling container
+import { Pressable } from 'react-native';
+import { Provider } from 'react-redux';
+import { useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { IconSymbol } from '@/components/ui/icon-symbol'; // Import IconSymbol
-import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { useEffect } from 'react';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { store } from '@/store/index';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { setUser, clearUser } from '@/store/slices/authSlice';
+import { auth } from '@/config/firebase';
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-const queryClient = new QueryClient();
+function FirebaseAuthListener() {
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        dispatch(setUser({ uid: firebaseUser.uid, email: firebaseUser.email }));
+      } else {
+        dispatch(clearUser());
+      }
+    });
+  }, [dispatch]);
+
+  return null;
+}
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const router = useRouter(); // Initialize useRouter
+  const router = useRouter();
   const segments = useSegments();
-  const { user, loading } = useAuth();
+  const { user, loading } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
     if (loading) return;
@@ -47,9 +65,9 @@ function RootLayoutNav() {
           <Stack.Screen
             name="movie/[id]"
             options={{
-              headerShown: true, // Show header
-              headerTransparent: true, // Make header transparent
-              headerTitle: '', // Hide header title
+              headerShown: true,
+              headerTransparent: true,
+              headerTitle: '',
               headerLeft: () => (
                 <Pressable onPress={() => router.back()} style={{
                   width: 40,
@@ -57,9 +75,9 @@ function RootLayoutNav() {
                   borderRadius: 20,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  backgroundColor: 'rgba(0,0,0,0.5)', // Semi-transparent
-                  marginLeft: 16, // Adjust position
-                  marginTop: 8, // Adjust position to be a bit lower
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  marginLeft: 16,
+                  marginTop: 8,
                 }}>
                   <IconSymbol size={20} name="chevron.left" color="#EDEDED" />
                 </Pressable>
@@ -77,11 +95,10 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <RootLayoutNav />
-        </AuthProvider>
-      </QueryClientProvider>
+      <Provider store={store}>
+        <FirebaseAuthListener />
+        <RootLayoutNav />
+      </Provider>
     </GestureHandlerRootView>
   );
 }

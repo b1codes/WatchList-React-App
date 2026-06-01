@@ -1,44 +1,38 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
-import { fetchMovieConfig } from '@/api/tmdb';
-import { getWatchlist, removeFromWatchlist } from '@/api/watchlist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { WatchListItem } from '@/constants/types';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
-import { FlatList } from 'react-native';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useGetMovieConfigQuery } from '@/store/api/tmdbApi';
+import { useGetWatchlistInfiniteQuery, useRemoveFromWatchlistMutation } from '@/store/api/watchlistApi';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { setWatchlistFilter, type WatchlistFilter } from '@/store/slices/uiSlice';
 
 const buildImageUrl = (baseUrl: string | null, size: string, path?: string | null) => {
   if (!baseUrl || !path) return null;
   return `${baseUrl}${size}${path}`;
 };
 
-const FILTERS = [
+const FILTERS: { key: WatchlistFilter; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'movie', label: 'Movies' },
   { key: 'tv', label: 'TV Shows' },
-] as const;
-
-type FilterKey = (typeof FILTERS)[number]['key'];
+];
 
 function WatchlistContent() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const [filter, setFilter] = useState<FilterKey>('all');
+  const dispatch = useAppDispatch();
+  const filter = useAppSelector((state) => state.ui.watchlistFilter);
 
-  const configQuery = useQuery({
-    queryKey: ['tmdb-config'],
-    queryFn: fetchMovieConfig,
-  });
-
+  const { data: config } = useGetMovieConfigQuery();
   const {
     data,
     fetchNextPage,
@@ -47,22 +41,15 @@ function WatchlistContent() {
     isLoading,
     isError,
     refetch,
-  } = useInfiniteQuery({
-    queryKey: ['watchlist'],
-    queryFn: ({ pageParam }) => getWatchlist(20, pageParam),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
-  });
+  } = useGetWatchlistInfiniteQuery(20);
+  const [removeFromWatchlist] = useRemoveFromWatchlistMutation();
 
-  const removeMutation = useMutation({
-    mutationFn: removeFromWatchlist,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['watchlist'] });
-      void Haptics.selectionAsync();
-    },
-  });
+  const handleRemove = async (tmdbId: number) => {
+    const result = await removeFromWatchlist(tmdbId);
+    if (!('error' in result)) void Haptics.selectionAsync();
+  };
 
-  const baseUrl = configQuery.data?.images?.secure_base_url ?? null;
+  const baseUrl = config?.images?.secure_base_url ?? null;
 
   const items = useMemo(() => {
     const allItems = data?.pages.flatMap((page) => page?.items ?? []) ?? [];
@@ -71,17 +58,17 @@ function WatchlistContent() {
   }, [data?.pages, filter]);
 
   const { numColumns, itemWidth, gap } = useResponsiveLayout({
-    mobileColumns: 1, // List view on mobile
+    mobileColumns: 1,
     tabletColumns: 2,
     desktopColumns: 3,
     gap: 12,
-    containerPadding: 40, // 20 padding on each side
+    containerPadding: 40,
   });
 
   const renderRightActions = (item: WatchListItem) => (
     <Pressable
       style={styles.deleteAction}
-      onPress={() => removeMutation.mutate(item.tmdbId)}>
+      onPress={() => handleRemove(item.tmdbId)}>
       <IconSymbol size={20} name="trash" color="#F2F2F2" />
       <ThemedText style={styles.deleteText}>Remove</ThemedText>
     </Pressable>
@@ -112,7 +99,7 @@ function WatchlistContent() {
             <Pressable
               key={item.key}
               style={[styles.filterChip, isActive ? styles.filterChipActive : null]}
-              onPress={() => setFilter(item.key)}>
+              onPress={() => dispatch(setWatchlistFilter(item.key))}>
               <ThemedText style={isActive ? styles.filterTextActive : styles.filterText}>
                 {item.label}
               </ThemedText>
@@ -149,8 +136,7 @@ function WatchlistContent() {
               const posterUrl = buildImageUrl(baseUrl, 'w342', item.posterPath);
               return (
                 <View style={{ width: itemWidth }}>
-                  <Swipeable
-                    renderRightActions={() => renderRightActions(item)}>
+                  <Swipeable renderRightActions={() => renderRightActions(item)}>
                     <Pressable
                       style={styles.row}
                       onPress={() => router.push(`/movie/${item.tmdbId}?type=${item.type}`)}>
@@ -179,7 +165,7 @@ function WatchlistContent() {
           />
         )}
       </View>
-    </ThemedView >
+    </ThemedView>
   );
 }
 

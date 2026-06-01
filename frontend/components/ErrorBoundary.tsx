@@ -13,7 +13,7 @@ function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
         Something went wrong
       </ThemedText>
       <ThemedText style={styles.message}>
-        {error.message || 'An unexpected error occurred while rendering this screen.'}
+        {(error instanceof Error ? error.message : null) || 'An unexpected error occurred while rendering this screen.'}
       </ThemedText>
       <Pressable style={styles.button} onPress={resetErrorBoundary}>
         <ThemedText style={styles.buttonText}>Try Again</ThemedText>

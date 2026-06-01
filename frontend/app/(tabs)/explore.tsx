@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Image } from 'expo-image';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import {
   ActivityIndicator,
@@ -10,75 +9,50 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
-import { fetchMovieConfig, getTrendingMovies, searchMovies } from '@/api/tmdb';
 import { MediaCard } from '@/components/MediaCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Fonts } from '@/constants/theme';
 import { MediaDto } from '@/constants/types';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
 import { useThemeColor } from '@/hooks/use-theme-color';
-
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useGetMovieConfigQuery, useGetTrendingMoviesQuery, useSearchMoviesInfiniteQuery } from '@/store/api/tmdbApi';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { setSearchDebouncedQuery } from '@/store/slices/uiSlice';
 
 function ExploreContent() {
   const router = useRouter();
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const dispatch = useAppDispatch();
+  const debouncedQuery = useAppSelector((state) => state.ui.searchDebouncedQuery);
+  const [query, setQuery] = useState(debouncedQuery);
 
   const { numColumns, itemWidth, gap } = useResponsiveLayout({
     mobileColumns: 3,
     tabletColumns: 4,
     desktopColumns: 6,
     gap: 16,
-    containerPadding: 32, // ParallaxScrollView default padding logic + list content padding
+    containerPadding: 32,
   });
 
-  const configQuery = useQuery({
-    queryKey: ['tmdb-config'],
-    queryFn: fetchMovieConfig,
-  });
+  const { data: config } = useGetMovieConfigQuery();
+  const { data: trending, isLoading: trendingLoading } = useGetTrendingMoviesQuery();
+  const searchQuery = useSearchMoviesInfiniteQuery(debouncedQuery, { skip: !debouncedQuery });
+  const { hasNextPage, isFetchingNextPage } = searchQuery;
 
   useEffect(() => {
     const handle = setTimeout(() => {
-      setDebouncedQuery(query.trim());
+      dispatch(setSearchDebouncedQuery(query.trim()));
     }, 350);
-
     return () => clearTimeout(handle);
-  }, [query]);
-
-  const trendingQuery = useQuery({
-    queryKey: ['trending'],
-    queryFn: getTrendingMovies,
-  });
-
-  const searchQuery = useInfiniteQuery({
-    queryKey: ['search', debouncedQuery],
-    queryFn: ({ pageParam }) => searchMovies(debouncedQuery, pageParam as number),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      if (!lastPage || !lastPage.nextCursor) return undefined;
-      return parseInt(lastPage.nextCursor, 10);
-    },
-    enabled: Boolean(debouncedQuery),
-  });
-
-  const buildPosterUrl = useMemo(() => {
-    const configBaseUrl = configQuery.data?.images?.secure_base_url ?? null;
-    if (!configBaseUrl) {
-      return (_: string | null | undefined) => null;
-    }
-    return (path: string | null | undefined) => (path ? `${configBaseUrl}w500${path}` : null);
-  }, [configQuery.data?.images?.secure_base_url]);
+  }, [query, dispatch]);
 
   const searchResults = (searchQuery.data?.pages.flatMap((page) => page?.items ?? []) ?? []).filter(
     (result) => result.mediaType !== 'person',
   );
 
-  const trendingResults = (trendingQuery.data?.items ?? []).filter(
+  const trendingResults = (trending?.items ?? []).filter(
     (result) => result.mediaType !== 'person',
   );
 
@@ -95,7 +69,7 @@ function ExploreContent() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor }}>
       <FlatList
-        key={numColumns} // Force re-render on column change
+        key={numColumns}
         data={results}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={[styles.listContent, { gap, paddingHorizontal: 32 }]}
@@ -105,11 +79,7 @@ function ExploreContent() {
         ListHeaderComponent={
           <View style={styles.headerContent}>
             <ThemedView style={styles.titleContainer}>
-              <ThemedText
-                type="title"
-                style={{
-                  fontFamily: Fonts.rounded,
-                }}>
+              <ThemedText type="title" style={{ fontFamily: Fonts.rounded }}>
                 Explore
               </ThemedText>
             </ThemedView>
@@ -147,28 +117,26 @@ function ExploreContent() {
             )}
           </View>
         }
-        renderItem={({ item }) => {
-          return (
-            <MediaCard
-              item={item}
-              onPress={handlePressItem}
-              width={itemWidth}
-              baseUrl={configQuery.data?.images?.secure_base_url}
-              style={styles.gridItem}
-            />
-          );
-        }}
+        renderItem={({ item }) => (
+          <MediaCard
+            item={item}
+            onPress={handlePressItem}
+            width={itemWidth}
+            baseUrl={config?.images?.secure_base_url}
+            style={styles.gridItem}
+          />
+        )}
         ListEmptyComponent={
-          query.trim() ? (
+          debouncedQuery ? (
             <ThemedText style={styles.emptyText}>
               {searchQuery.isFetching ? 'Searching...' : 'No results found.'}
             </ThemedText>
-          ) : trendingQuery.isLoading ? (
+          ) : trendingLoading ? (
             <ActivityIndicator size="small" style={{ marginTop: 20 }} />
           ) : null
         }
         onEndReached={() => {
-          if (searchQuery.hasNextPage) {
+          if (hasNextPage && !isFetchingNextPage) {
             searchQuery.fetchNextPage();
           }
         }}

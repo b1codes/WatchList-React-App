@@ -1,7 +1,9 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
 // @ts-ignore: TypeScript doesn't resolve the react-native export condition by default
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -14,6 +16,7 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+// Web uses Firebase's default in-memory auth; native uses AsyncStorage persistence.
+export const auth = Platform.OS === 'web'
+  ? getAuth(app)
+  : initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) });

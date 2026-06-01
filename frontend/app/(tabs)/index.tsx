@@ -1,21 +1,17 @@
 import { useMemo } from 'react';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 
-import { discoverMovies, fetchMovieConfig, getTrendingMovies } from '@/api/tmdb';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { MediaCard } from '@/components/MediaCard';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Fonts } from '@/constants/theme';
 import { MediaDto } from '@/constants/types';
-
-import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useResponsiveLayout } from '@/hooks/use-responsive-layout';
-
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useGetMovieConfigQuery, useGetTrendingMoviesQuery, useDiscoverMoviesQuery } from '@/store/api/tmdbApi';
 
 const buildImageUrl = (baseUrl: string | null, size: string, path?: string | null) => {
   if (!baseUrl || !path) return null;
@@ -24,23 +20,14 @@ const buildImageUrl = (baseUrl: string | null, size: string, path?: string | nul
 
 function HomeContent() {
   const router = useRouter();
-  const configQuery = useQuery({
-    queryKey: ['tmdb-config'],
-    queryFn: fetchMovieConfig,
-  });
-  const trendingQuery = useQuery({
-    queryKey: ['trending'],
-    queryFn: getTrendingMovies,
-  });
-  const discoverQuery = useQuery({
-    queryKey: ['discover'],
-    queryFn: () => discoverMovies(1),
-  });
+  const { data: config } = useGetMovieConfigQuery();
+  const { data: trending } = useGetTrendingMoviesQuery();
+  const { data: discover } = useDiscoverMoviesQuery(1);
 
   const { isMobile } = useResponsiveLayout();
 
-  const baseUrl = configQuery.data?.images?.secure_base_url ?? null;
-  const heroItem = trendingQuery.data?.items?.[0] ?? null;
+  const baseUrl = config?.images?.secure_base_url ?? null;
+  const heroItem = trending?.items?.[0] ?? null;
 
   const heroPoster = useMemo(
     () => buildImageUrl(baseUrl, 'w780', heroItem?.posterPath),
@@ -109,8 +96,8 @@ function HomeContent() {
         </Pressable>
       ) : null}
 
-      {renderRow('Trending Now', trendingQuery.data?.items ?? [])}
-      {renderRow('New Releases', discoverQuery.data?.items ?? [])}
+      {renderRow('Trending Now', trending?.items ?? [])}
+      {renderRow('New Releases', discover?.items ?? [])}
     </ParallaxScrollView>
   );
 }

@@ -2,20 +2,27 @@ import { useMemo } from 'react';
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
-import { Pressable, ScrollView, StyleSheet, View, FlatList } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { fetchMovieConfig, getMovieDetails, getSimilarMovies, getRecommendedMovies } from '@/api/tmdb';
-import { addToWatchlist, getWatchlist, removeFromWatchlist } from '@/api/watchlist';
 import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { MediaCard } from '@/components/MediaCard';
 import { CreateWatchListItemRequest, MediaDto } from '@/constants/types';
-
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import {
+  useGetMovieConfigQuery,
+  useGetMovieDetailsQuery,
+  useGetSimilarMoviesQuery,
+  useGetRecommendedMoviesQuery,
+} from '@/store/api/tmdbApi';
+import {
+  useGetWatchlistInfiniteQuery,
+  useAddToWatchlistMutation,
+  useRemoveFromWatchlistMutation,
+} from '@/store/api/watchlistApi';
 
 const buildImageUrl = (baseUrl: string | null, size: string, path?: string | null) => {
   if (!baseUrl || !path) return null;
@@ -27,54 +34,20 @@ function MovieDetailsContent() {
   const { id, type: typeParam } = useLocalSearchParams();
   const movieId = Number(Array.isArray(id) ? id[0] : id);
   const mediaType = (Array.isArray(typeParam) ? typeParam[0] : typeParam) || 'movie';
-  const queryClient = useQueryClient();
 
-  const configQuery = useQuery({
-    queryKey: ['tmdb-config'],
-    queryFn: fetchMovieConfig,
-  });
+  const skip = !Number.isFinite(movieId) || movieId <= 0;
 
-  const detailsQuery = useQuery({
-    queryKey: ['movie-details', movieId, mediaType],
-    queryFn: () => getMovieDetails(movieId, mediaType),
-    enabled: Number.isFinite(movieId) && movieId > 0,
-  });
+  const { data: config } = useGetMovieConfigQuery();
+  const { data: detailsData } = useGetMovieDetailsQuery({ id: movieId, type: mediaType }, { skip });
+  const { data: watchlistData } = useGetWatchlistInfiniteQuery(20);
+  const { data: similarData } = useGetSimilarMoviesQuery({ id: movieId, page: 1, type: mediaType }, { skip });
+  const { data: recommendedData } = useGetRecommendedMoviesQuery({ id: movieId, page: 1, type: mediaType }, { skip });
 
-  const watchlistQuery = useQuery({
-    queryKey: ['watchlist'],
-    queryFn: () => getWatchlist(),
-  });
+  const [addToWatchlist] = useAddToWatchlistMutation();
+  const [removeFromWatchlist] = useRemoveFromWatchlistMutation();
 
-  const similarQuery = useQuery({
-    queryKey: ['similar-movies', movieId, mediaType],
-    queryFn: () => getSimilarMovies(movieId, 1, mediaType),
-    enabled: Number.isFinite(movieId) && movieId > 0,
-  });
-
-  const recommendedQuery = useQuery({
-    queryKey: ['recommended-movies', movieId, mediaType],
-    queryFn: () => getRecommendedMovies(movieId, 1, mediaType),
-    enabled: Number.isFinite(movieId) && movieId > 0,
-  });
-
-  const addMutation = useMutation({
-    mutationFn: addToWatchlist,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['watchlist'] });
-      void Haptics.selectionAsync();
-    },
-  });
-
-  const removeMutation = useMutation({
-    mutationFn: removeFromWatchlist,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['watchlist'] });
-      void Haptics.selectionAsync();
-    },
-  });
-
-  const baseUrl = configQuery.data?.images?.secure_base_url ?? null;
-  const details = detailsQuery.data?.details ?? null;
+  const baseUrl = config?.images?.secure_base_url ?? null;
+  const details = detailsData?.details ?? null;
   const posterUrl = buildImageUrl(baseUrl, 'w780', details?.posterPath);
 
   const title = details?.title ?? 'Loading...';
@@ -82,45 +55,44 @@ function MovieDetailsContent() {
   const runtime = details?.runtime;
 
   const isInWatchlist = Boolean(
-    watchlistQuery.data?.items?.some((item) => item.tmdbId === movieId),
+    watchlistData?.pages.flatMap((p) => p?.items ?? []).some((item) => item.tmdbId === movieId),
   );
 
-  const handleToggleWatchlist = () => {
+  const handleToggleWatchlist = async () => {
     if (!details) return;
     if (isInWatchlist) {
-      removeMutation.mutate(movieId);
+      const result = await removeFromWatchlist(movieId);
+      if (!('error' in result)) void Haptics.selectionAsync();
       return;
     }
-
     const payload: CreateWatchListItemRequest = {
       tmdbId: movieId,
-      title: title,
+      title,
       type: mediaType,
       posterPath: details.posterPath ?? null,
       releaseYear: releaseYear ? Number(releaseYear) : null,
     };
-
-    addMutation.mutate(payload);
+    const result = await addToWatchlist(payload);
+    if (!('error' in result)) void Haptics.selectionAsync();
   };
 
   const providers = useMemo(() => {
-    const regionMap = detailsQuery.data?.providers?.results ?? {};
+    const regionMap = detailsData?.providers?.results ?? {};
     return regionMap.US ?? Object.values(regionMap)[0] ?? null;
-  }, [detailsQuery.data?.providers?.results]);
+  }, [detailsData?.providers?.results]);
 
   const cast = details?.cast?.slice(0, 15) ?? [];
 
   const handlePressMovie = (item: MediaDto) => {
-    // using router.push adds it to the navigation stack
     router.push(`/movie/${item.id}?type=${item.mediaType || mediaType}`);
   };
 
-  const renderRow = (title: string, items?: MediaDto[]) => {
+  const renderRow = (rowTitle: string, items?: MediaDto[]) => {
     if (!items || items.length === 0) return null;
     return (
       <ThemedView style={styles.rowSection}>
         <ThemedText type="subtitle" style={styles.rowTitle}>
-          {title}
+          {rowTitle}
         </ThemedText>
         <FlatList
           data={items}
@@ -156,7 +128,6 @@ function MovieDetailsContent() {
         )
       }>
 
-
       <View style={styles.contentContainer}>
         <View style={styles.heroRow}>
           <Image
@@ -169,13 +140,11 @@ function MovieDetailsContent() {
             <ThemedText type="title" style={styles.titleText}>
               {title}
             </ThemedText>
-
             <ThemedText style={styles.subtitleText}>
               {releaseYear
                 ? `${releaseYear} · ${runtime ? `${runtime} min` : 'Runtime n/a'}`
                 : 'Runtime unavailable'}
             </ThemedText>
-
             <View style={styles.actionRow}>
               <Pressable
                 onPress={handleToggleWatchlist}
@@ -186,7 +155,6 @@ function MovieDetailsContent() {
                   color={isInWatchlist ? '#111111' : '#EDEDED'}
                 />
               </Pressable>
-              {/* Optional: Add more buttons here later */}
             </View>
           </View>
         </View>
@@ -199,7 +167,6 @@ function MovieDetailsContent() {
           <ThemedText style={styles.overview}>{details.overview}</ThemedText>
         ) : null}
 
-        {/* Cast Section */}
         {cast.length > 0 && (
           <View style={styles.sectionContainer}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>Top Cast</ThemedText>
@@ -242,8 +209,8 @@ function MovieDetailsContent() {
           </ThemedView>
         ) : null}
 
-        {renderRow('Similar Movies', similarQuery.data?.items)}
-        {renderRow('Recommended For You', recommendedQuery.data?.items)}
+        {renderRow('Similar Movies', similarData?.items)}
+        {renderRow('Recommended For You', recommendedData?.items)}
       </View>
     </ParallaxScrollView>
   );
@@ -272,7 +239,6 @@ const styles = StyleSheet.create({
     height: 380,
     backgroundColor: '#1E1E1E',
   },
-
   contentContainer: {
     gap: 16,
     paddingBottom: 32,
@@ -326,19 +292,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     fontSize: 15,
   },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  metaLabel: {
-    fontWeight: 'bold',
-    color: '#EDEDED',
-  },
-  metaValue: {
-    color: '#C7C7C7',
-    flex: 1,
-  },
   sectionContainer: {
     marginTop: 24,
   },
@@ -354,7 +307,7 @@ const styles = StyleSheet.create({
   castImage: {
     width: 100,
     height: 100,
-    borderRadius: 50, // Circular
+    borderRadius: 50,
     backgroundColor: '#2A2A2A',
     marginBottom: 8,
   },
