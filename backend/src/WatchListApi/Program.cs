@@ -17,21 +17,33 @@ builder.Services.Configure<TmdbSettings>(builder.Configuration.GetSection("Tmdb"
 // 1. Read configuration
 var projectId = builder.Configuration["Firebase:ProjectId"];
 var credentialPath = builder.Configuration["Firebase:CredentialPath"];
+var credentialJson = builder.Configuration["Firebase:CredentialJson"];
 
 if (string.IsNullOrWhiteSpace(projectId))
 {
     throw new InvalidOperationException("Firebase:ProjectId is required.");
 }
 
-// 2. Set the environment variable for authentication (if using a file path)
-if (!string.IsNullOrEmpty(credentialPath))
+// 2. Register FirestoreDb as a Singleton.
+// Prefer an inline JSON credential (e.g. from a Lambda env var, where the
+// filesystem is read-only) over a credential file path used for local dev.
+builder.Services.AddSingleton<FirestoreDb>(provider =>
 {
-    Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialPath);
-}
+    var firestoreBuilder = new FirestoreDbBuilder { ProjectId = projectId };
 
-// 3. Register FirestoreDb as a Singleton
-builder.Services.AddSingleton<FirestoreDb>(provider => 
-    FirestoreDb.Create(projectId));
+    if (!string.IsNullOrEmpty(credentialJson))
+    {
+        firestoreBuilder.GoogleCredential = Google.Apis.Auth.OAuth2.CredentialFactory
+            .FromJson<Google.Apis.Auth.OAuth2.ServiceAccountCredential>(credentialJson)
+            .ToGoogleCredential();
+    }
+    else if (!string.IsNullOrEmpty(credentialPath))
+    {
+        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialPath);
+    }
+
+    return firestoreBuilder.Build();
+});
 
 builder.Services.AddHttpClient<ITmdbService, TmdbService>();
 builder.Services.AddScoped<WatchListRepository>();

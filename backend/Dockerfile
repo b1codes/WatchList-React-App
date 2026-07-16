@@ -16,7 +16,13 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 COPY --from=build /out ./
 
-# Cloud Run expects the app to listen on the port defined by the PORT environment variable
+# Lambda Web Adapter runs as a Lambda extension, proxying Lambda invocations to
+# this app over HTTP on AWS_LWA_PORT (defaults to 8080). It's a no-op outside
+# Lambda, so this same image still works on Cloud Run / any other host.
+# Check https://gallery.ecr.aws/awsguru/aws-lambda-adapter for newer tags.
+COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:0.9.1 /lambda-adapter /opt/extensions/lambda-adapter
+
+# Cloud Run / Lambda Web Adapter both expect the app to listen on this port
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 
