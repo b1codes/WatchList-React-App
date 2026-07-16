@@ -31,7 +31,8 @@ public class WatchListRepository
         bool hasNext = items.Count > pageSize;
         if (hasNext) items.RemoveAt(pageSize);
 
-        string? nextCursor = hasNext ? $"{items.Last().AddedDate?.Seconds}.{items.Last().AddedDate?.Nanoseconds}" : null;
+        var lastAddedDateProto = items.Last().AddedDate?.ToProto();
+        string? nextCursor = hasNext ? $"{lastAddedDateProto?.Seconds}.{lastAddedDateProto?.Nanos}" : null;
 
         return new PagedResponse<WatchListItem>
         {

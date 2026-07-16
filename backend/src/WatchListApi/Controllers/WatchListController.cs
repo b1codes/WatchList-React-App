@@ -31,7 +31,11 @@ public class WatchListController : ControllerBase
         Google.Cloud.Firestore.Timestamp? lastAddedDate = null;
         if (lastAddedDateSeconds.HasValue)
         {
-            lastAddedDate = new Google.Cloud.Firestore.Timestamp(lastAddedDateSeconds.Value, lastAddedDateNanos ?? 0);
+            lastAddedDate = Google.Cloud.Firestore.Timestamp.FromProto(new Google.Protobuf.WellKnownTypes.Timestamp
+            {
+                Seconds = lastAddedDateSeconds.Value,
+                Nanos = lastAddedDateNanos ?? 0
+            });
         }
 
         var result = await _watchListRepository.GetWatchlistByUserIdAsync(userId, pageSize, lastAddedDate);
